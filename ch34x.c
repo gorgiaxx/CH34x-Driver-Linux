@@ -18,6 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
+#include <linux/signal.h>
 #include <linux/slab.h>
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
@@ -30,9 +31,6 @@
 //#include <linux/uaccess.h>
 #include <linux/usb.h>
 #include <linux/usb/serial.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
-#include <linux/sched/signal.h>
-#endif
 
 #define DRIVER_DESC		"WCH CH34x USB to serial adaptor driver"
 #define DRIVER_AUTHOR	"<tech@wch.cn>"
@@ -589,14 +587,10 @@ static void ch34x_close( struct usb_serial_port *port,
 	struct ch34x_private *priv = usb_get_serial_port_data(port);
 	unsigned long flags;
 	unsigned int c_cflag;
-	int bps;
-	long timeout;
+	// int bps;
+	// long timeout;
+	// wait_queue_entry_t wait;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0))
-	wait_queue_t wait;
-#else
-	wait_queue_entry_t wait;
-#endif
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
 	dbg_ch34x("%s - port:%d", __func__, port->number);
 #else
@@ -941,16 +935,22 @@ static int ch34x_write( struct usb_serial_port *port,
 	return count;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+static unsigned int ch34x_write_room( struct tty_struct *tty )
+{
+	struct usb_serial_port *port = tty->driver_data;
+	unsigned int room = 0;
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 static int ch34x_write_room( struct tty_struct *tty )
 {
 	struct usb_serial_port *port = tty->driver_data;
+	int room = 0;
 #else
 static int ch34x_write_room( struct usb_serial_port *port )
 {
+	int room = 0;
 #endif
 	struct ch34x_private *priv = usb_get_serial_port_data( port );
-	int room = 0;
 	unsigned long flags;
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
@@ -967,16 +967,21 @@ static int ch34x_write_room( struct usb_serial_port *port )
 	return room;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+static unsigned int ch34x_chars_in_buffer( struct tty_struct *tty )
+{
+	struct usb_serial_port *port = tty->driver_data;
+	unsigned int chars = 0;
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 static int ch34x_chars_in_buffer( struct tty_struct *tty )
 {
 	struct usb_serial_port *port = tty->driver_data;
+	int chars = 0;
 #else
 static int ch34x_chars_in_buffer( struct usb_serial_port *port )
 {
 #endif
 	struct ch34x_private *priv = usb_get_serial_port_data(port);
-	int chars = 0;
 	unsigned long flags;
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
