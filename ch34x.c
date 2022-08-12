@@ -18,7 +18,11 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#else
 #include <linux/signal.h>
+#endif
 #include <linux/slab.h>
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
